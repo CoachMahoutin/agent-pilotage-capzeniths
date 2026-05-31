@@ -3,19 +3,31 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
-  if (!supabaseUrl || !supabaseKey) return res.status(500).json({ error: 'Supabase non configuré' });
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(500).json({ error: `Supabase non configuré — URL: ${!!supabaseUrl}, KEY: ${!!supabaseKey}` });
+  }
 
   const headers = {
     'Content-Type': 'application/json',
     'apikey': supabaseKey,
     'Authorization': `Bearer ${supabaseKey}`,
-    'Prefer': 'return=representation',
+    'Accept': 'application/json',
   };
 
   const q = async (table, params = '') => {
-    const r = await fetch(`${supabaseUrl}/rest/v1/${table}?${params}`, { headers });
-    if (!r.ok) return [];
-    return r.json();
+    try {
+      const url = `${supabaseUrl}/rest/v1/${table}?${params}`;
+      const r = await fetch(url, { headers });
+      if (!r.ok) {
+        const err = await r.text();
+        console.error(`Error fetching ${table}: ${r.status} ${err}`);
+        return [];
+      }
+      return r.json();
+    } catch (e) {
+      console.error(`Fetch error for ${table}:`, e.message);
+      return [];
+    }
   };
 
   try {
