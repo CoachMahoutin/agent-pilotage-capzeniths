@@ -224,16 +224,20 @@ async function callAI(systemPrompt, userPrompt) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }]
     })
   });
-  if (!res.ok) throw new Error(`Erreur API ${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API ${res.status}: ${errText}`);
+  }
   const data = await res.json();
-  const text = data.content?.[0]?.text || data.content?.map?.(b => b.text || '').join('') || '';
-  return JSON.parse(text.replace(/```json|```/g, '').trim());
+  const raw = (data.content?.[0]?.text || data.content?.map?.(b => b.text || '').join('') || '').replace(/```json|```/g, '').trim();
+  const jsonMatch = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+  return JSON.parse(jsonMatch ? jsonMatch[0] : raw);
 }
 
 // ─── TAB: DASHBOARD ───────────────────────────────────────────────────────────
